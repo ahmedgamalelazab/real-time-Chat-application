@@ -18,7 +18,7 @@ class ChatRoom extends StatefulWidget {
 }
 
 class _ChatRoomState extends State<ChatRoom> {
-  IO.Socket socket = IO.io('http://192.168.1.4:3000', {
+  IO.Socket socket = IO.io('http://localhost:3000', {
     "transports": ['websocket'],
     "autoConnect": false
   });
