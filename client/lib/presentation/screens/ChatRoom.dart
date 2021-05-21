@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:client/config/fonts.dart';
 import 'package:client/config/size.dart';
+import 'package:client/data/model/messageModel.dart';
 import 'package:client/logic/ChatBloc/chat_bloc.dart';
 import 'package:client/presentation/screens/homePage.dart';
 import 'package:flutter/material.dart';
@@ -28,15 +31,60 @@ class _ChatRoomState extends State<ChatRoom> {
     super.initState();
   }
 
+  ScrollController _scrollController = new ScrollController();
+
   @override
   void didChangeDependencies() {
     // print(socket.connected);
     socket.onConnect((_) {
       print(socket.connected);
-      socket.on(
-          'message',
-          (message) => BlocProvider.of<ChatBloc>(context)
-              .add(OnServerDeliveredMessage(message: message)));
+      print(socket.id);
+      socket.emit(
+          'userEnterRoom',
+          json.encode({
+            //some info about the user chat room
+            "room": (ModalRoute.of(context).settings.arguments
+                    as Map<String, dynamic>)['RoomTitle']
+                .toString(),
+            "userName": (ModalRoute.of(context).settings.arguments
+                    as Map<String, dynamic>)['userName']
+                .toString()
+          }));
+      socket.on('message', (message) {
+        _scrollController.animateTo(
+            //! get the height of the componet now !
+            _scrollController.position.maxScrollExtent +
+                DeviceSizeUtils.getDeviceHieghtWithoutNotificationBar(
+                        context: context) *
+                    0.1,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut);
+        BlocProvider.of<ChatBloc>(context).add(OnServerDeliveredMessage(
+            message: ChatCordMessageModel(
+                content: message,
+                messageType: MessageType.SERVER,
+                messageFrom: "server",
+                messageTo: "user")));
+      });
+      socket.on('serverMessage', (msg) {
+        _scrollController.animateTo(
+            //! get the height of the componet now !
+            _scrollController.position.maxScrollExtent +
+                DeviceSizeUtils.getDeviceHieghtWithoutNotificationBar(
+                        context: context) *
+                    0.1,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut);
+        // print('catched it ');
+        final msgParser = json.decode(msg) as Map<String, dynamic>;
+        print(msgParser);
+        BlocProvider.of<ChatBloc>(context).add(OnServerDeliveredMessage(
+            message: ChatCordMessageModel(
+                content: msgParser['userMessage'],
+                messageType: MessageType.SERVER,
+                messageFrom: msgParser['messageFrom'],
+                messageTo: msgParser['messageTo'])));
+      });
 
       return print('connected');
     });
@@ -49,6 +97,9 @@ class _ChatRoomState extends State<ChatRoom> {
     socket.on('message', (message) => print(message));
     final arguments =
         ModalRoute.of(context).settings.arguments as Map<String, dynamic>;
+    print('user : ${arguments["userName"]}');
+    print('room : ${arguments['RoomTitle'].toString()}');
+
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColorLight,
       appBar: PreferredSize(
@@ -107,6 +158,9 @@ class _ChatRoomState extends State<ChatRoom> {
                       builder: (context, state) {
                         if (state is ServerDeliveredMessageSuccess) {
                           return ListView.builder(
+                            controller: _scrollController,
+                            shrinkWrap: true,
+                            reverse: false,
                             itemCount: state.message.length,
                             itemBuilder: (context, index) => Container(
                               // height: DeviceSizeUtils.getDeviceWidth(
@@ -121,6 +175,11 @@ class _ChatRoomState extends State<ChatRoom> {
                               //                 context: context) *
                               //         0.088,
                               child: Card(
+                                color: (state.message[index].messageFrom
+                                            .toString() ==
+                                        arguments['userName'].toString())
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
                                     DeviceSizeUtils
@@ -144,24 +203,95 @@ class _ChatRoomState extends State<ChatRoom> {
                                               0.025,
                                     ),
                                     alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      state.message[index],
-                                      style: ApplicationFonts.getHeaderFont(
-                                          context: context,
-                                          color: Colors.black,
-                                          fontSize: DeviceSizeUtils
-                                                      .getDeviceWidth(
+                                    // color: Colors.green,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          //!danger area fix it pleas
+                                          padding: EdgeInsets.only(
+                                            bottom: DeviceSizeUtils
+                                                        .getDeviceWidth(
+                                                            context: context) >
+                                                    480
+                                                ? DeviceSizeUtils
+                                                        .getDeviceHieghtWithoutNotificationBar(
+                                                            context: context) *
+                                                    0.025
+                                                : DeviceSizeUtils
+                                                        .getDeviceHieghtWithoutNotificationBar(
+                                                            context: context) *
+                                                    0.010,
+                                          ),
+                                          child: Container(
+                                            padding: EdgeInsets.only(
+                                              top: DeviceSizeUtils
+                                                          .getDeviceWidth(
+                                                              context:
+                                                                  context) >
+                                                      480
+                                                  ? DeviceSizeUtils
+                                                          .getDeviceHieghtWithoutNotificationBar(
+                                                              context:
+                                                                  context) *
+                                                      0.025
+                                                  : DeviceSizeUtils
+                                                          .getDeviceHieghtWithoutNotificationBar(
+                                                              context:
+                                                                  context) *
+                                                      0.010,
+                                            ),
+                                            child: Text(
+                                              state.message[index].messageFrom,
+                                              style: ApplicationFonts.getHeaderFont(
+                                                  context: context,
+                                                  color: (state.message[index]
+                                                              .messageFrom
+                                                              .toString() ==
+                                                          arguments['userName']
+                                                              .toString())
+                                                      ? Colors.white
+                                                      : Colors.black,
+                                                  fontSize: DeviceSizeUtils.getDeviceWidth(
+                                                              context:
+                                                                  context) >
+                                                          480
+                                                      ? DeviceSizeUtils.getDeviceHieghtWithoutNotificationBar(
+                                                              context:
+                                                                  context) *
+                                                          0.040
+                                                      : DeviceSizeUtils.getDeviceHieghtWithoutNotificationBar(
+                                                              context: context) *
+                                                          0.020,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          state.message[index].content,
+                                          style: ApplicationFonts.getHeaderFont(
+                                              context: context,
+                                              color: (state.message[index]
+                                                          .messageFrom
+                                                          .toString() ==
+                                                      arguments['userName']
+                                                          .toString())
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                              fontSize: DeviceSizeUtils.getDeviceWidth(
                                                           context: context) >
-                                                  480
-                                              ? DeviceSizeUtils
-                                                      .getDeviceHieghtWithoutNotificationBar(
+                                                      480
+                                                  ? DeviceSizeUtils.getDeviceHieghtWithoutNotificationBar(
                                                           context: context) *
-                                                  0.040
-                                              : DeviceSizeUtils
-                                                      .getDeviceHieghtWithoutNotificationBar(
-                                                          context: context) *
-                                                  0.020,
-                                          fontWeight: FontWeight.w600),
+                                                      0.040
+                                                  : DeviceSizeUtils
+                                                          .getDeviceHieghtWithoutNotificationBar(
+                                                              context: context) *
+                                                      0.020,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
                                     )),
                               ),
                             ),
@@ -301,9 +431,31 @@ class _ChatRoomState extends State<ChatRoom> {
                           onTap: () {
                             formKey.currentState.save();
                             print(userMessage);
-                            BlocProvider.of<ChatBloc>(context)
-                                .add(UserSendMessage(userMessage: userMessage));
-                            socket.emit('userMessage', userMessage);
+
+                            socket.emit(
+                                'userMessage',
+                                json.encode({
+                                  "userMessage": userMessage,
+                                  "messageType": "user",
+                                  "messageFrom":
+                                      arguments['userName'].toString(),
+                                  "messageTo":
+                                      arguments['RoomTitle'].toString(),
+                                }));
+                            // _scrollController.animateTo(0.0,
+                            //     curve: Curves.easeOut,
+                            //     duration: const Duration(milliseconds: 300));
+                            _scrollController.animateTo(
+                                //! get the height of the componet now !
+                                _scrollController.position.maxScrollExtent +
+                                    DeviceSizeUtils
+                                            .getDeviceHieghtWithoutNotificationBar(
+                                                context: context) *
+                                        0.1,
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeOut);
+                            // _scrollController.jumpTo(
+                            //     _scrollController.position.maxScrollExtent);
                           },
                           child: Icon(Icons.send,
                               color: Theme.of(context).primaryColorLight),

@@ -6,7 +6,7 @@ abstract class ChatState {}
 class ChatInitial extends ChatState {}
 
 class ServerDeliveredMessageSuccess extends ChatState {
-  final List<String> message;
+  final List<ChatCordMessageModel> message;
 
   ServerDeliveredMessageSuccess({@required this.message});
 }

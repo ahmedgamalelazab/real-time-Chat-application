@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:client/data/model/messageModel.dart';
 import 'package:meta/meta.dart';
 part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  List<String> messages = [];
+  List<ChatCordMessageModel> messages = [];
   ChatBloc() : super(ChatInitial());
 
   @override
@@ -19,7 +20,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     } else if (event is ClearChatOnClientDisconnect) {
       messages.clear();
     } else if (event is UserSendMessage) {
-      messages.add(event.userMessage);
+      messages.add(event.message);
       yield ServerDeliveredMessageSuccess(message: messages);
     }
   }

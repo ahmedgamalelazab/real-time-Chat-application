@@ -4,7 +4,7 @@ part of 'chat_bloc.dart';
 abstract class ChatEvent {}
 
 class OnServerDeliveredMessage extends ChatEvent {
-  final String message;
+  final ChatCordMessageModel message;
 
   OnServerDeliveredMessage({@required this.message});
 }
@@ -12,7 +12,7 @@ class OnServerDeliveredMessage extends ChatEvent {
 class ClearChatOnClientDisconnect extends ChatEvent {}
 
 class UserSendMessage extends ChatEvent {
-  final String userMessage;
+  final ChatCordMessageModel message;
 
-  UserSendMessage({@required this.userMessage});
+  UserSendMessage({@required this.message});
 }

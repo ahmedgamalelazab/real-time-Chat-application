@@ -13,6 +13,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String dropdownValue = 'Node.js';
+  String userName = '';
+  final formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Card(
                   color: Theme.of(context).accentColor,
                   child: Form(
+                    key: formKey,
                     child: Column(
                       children: [
                         Container(
@@ -80,6 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           context: context) *
                                   0.065,
                           child: TextFormField(
+                            onSaved: (value) {
+                              userName = value;
+                            },
                             decoration: InputDecoration(
                               labelText: 'enter your name',
                               contentPadding: EdgeInsets.only(
@@ -205,9 +211,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: ElevatedButton(
                             onPressed: () {
                               //!backend Code
+                              formKey.currentState.save();
                               Navigator.of(context).pushReplacementNamed(
                                 ChatRoom.PAGE_ROUTE,
-                                arguments: {"RoomTitle": dropdownValue},
+                                arguments: {
+                                  "RoomTitle": dropdownValue,
+                                  "userName": userName
+                                },
                               );
                             },
                             child: Text("Enter the Chat"),
